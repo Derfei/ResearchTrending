@@ -18,4 +18,3 @@ class GetarchivesSpider(scrapy.Spider):
 
             tmpSubjectLink = tmpOption.css('::attr(data-url)').get()
             subjectOptions[tmpSubjectName] = tmpSubjectLink
-    
