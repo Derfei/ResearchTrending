@@ -13,35 +13,44 @@ class TodaypapersSpider(scrapy.Spider):
         if 'About arXiv' in subjectNames:
             subjectNames.remove('About arXiv')
 
-        # build the subject Tree 
+        # build the subject Tree {phics: [High phic experiment, High phic thory], High phsic: []}
         subjectTree = {}
-        topicItems  = response.css('#content > ul > li')
+        # the link for each subject {phics: ['http://arxiv.org/phics/recent']}
+        subjectLinks = {}
+
+        # for each top subject css path is #content > ul:nth-child(3) #content > ul:nth-child(3) #content > ul:nth-child(5) #content > ul:nth-child(7) #content > ul:nth-child(17)
+        for i, topSubject in enumerate(subjectNames):
+            # the list of topsubjects
+            itemList = response.css(r"#content > ul:nth-child({0})".format(3+i*2))
+
+            # for each item, get the name of the item. If each item include some sub-items, add subitems to the tree
+            liList = itemList.css("li")
+            for tmpli in liList:
+                # get the name of the item #main-astro-ph
+                itemName = tmpli.css("a:nth-child(0)::text")
+                itemLinks = [tmpli.css(r"a:nth-child({0})::attr(href)".format(j))for j in range(2, 5)]
+
+                # add the item to the tree
+                if topSubject not in subjectTree:
+                    subjectTree[topSubject] = []
+                subjectTree[topSubject].append(itemName)
+                subjectLinks[itemName] = itemLinks
+
+                # if the item include something
+                if tmpli.css("::text").get().find("includes"):
+                    aList = tmpli.css("a")
+                    for j in range(5, len(aList)):
+                        subitemName = aList[j-1].css("::text").get()
+                        subitemLink = aList[j-1].css("::href").get()
+
+                        # add the subitems to the tree
+                        if itemName not in subjectTree:
+                            subjectTree[itemName] = []
+                        subjectTree[itemName].append(subitemName)
+                        subjectLinks[subitemName] = subitemLink
+
+        # tranverse the subjectTree and get the recent infomation of the paper list
         
-        for tmpTopic in topicItems:
-            topicName = tmpTopic.xpath('a').extract_first().text
-
-            topicLink = tmpTopic.xpath('a').extract_first().attr('href')
-
-
-            # get the topic name 
-            
-
-            # get the topic link 
-
-        # get name and links of all subjects
-        subjectOptions = {}
-        optionsSelectors = response.css('#search-category > option')
-        for tmpOption in optionsSelectors:
-            tmpSubjectName = tmpOption.css('::text').get()
-            # clear \n and space 
-            tmpSubjectName = tmpSubjectName.strip().replace('\n', '')
-
-            tmpSubjectLink = tmpOption.css('::attr(data-url)').get()
-            subjectOptions[tmpSubjectName] = tmpSubjectLink
-
-        # for each link, get data of the paper
-        for tmpSubjectName, tmpSubjectLinks in subjectOptions:
-            yield scrapy.Request(tmpSubjectLinks, callback=self.parse_pages)
         
 
     def parse_pages(self, reponse):
