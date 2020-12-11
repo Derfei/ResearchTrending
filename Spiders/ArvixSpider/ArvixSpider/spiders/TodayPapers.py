@@ -26,33 +26,63 @@ class TodaypapersSpider(scrapy.Spider):
             # for each item, get the name of the item. If each item include some sub-items, add subitems to the tree
             liList = itemList.css("li")
             for tmpli in liList:
-                # get the name of the item #main-astro-ph
-                itemName = tmpli.css("a:nth-child(0)::text")
-                itemLinks = [tmpli.css(r"a:nth-child({0})::attr(href)".format(j))for j in range(2, 5)]
+                # get the name of the item #main-astro-ph 
+                itemName = tmpli.css("a:nth-child(1)::text").get()
+                itemLinks = [tmpli.css(r"a:nth-child({0})::attr(href)".format(j)).get() for j in range(3, 6)]
 
                 # add the item to the tree
                 if topSubject not in subjectTree:
                     subjectTree[topSubject] = []
                 subjectTree[topSubject].append(itemName)
-                subjectLinks[itemName] = itemLinks
+                subjectLinks[itemName] = response.urljoin(itemLinks)
 
                 # if the item include something
-                if tmpli.css("::text").get().find("includes"):
+                tmpTextList = tmpli.css("::text").getall()
+                tmpStr = "".join(tmpTextList)
+                if tmpStr.find("includes") != -1:
                     aList = tmpli.css("a")
                     for j in range(5, len(aList)):
                         subitemName = aList[j-1].css("::text").get()
-                        subitemLink = aList[j-1].css("::href").get()
+                        subitemLink = aList[j-1].css("::attr(href)").get()
 
                         # add the subitems to the tree
                         if itemName not in subjectTree:
                             subjectTree[itemName] = []
                         subjectTree[itemName].append(subitemName)
-                        subjectLinks[subitemName] = subitemLink
+                        subjectLinks[subitemName] = response.urljoin(subitemLink)
 
-        # tranverse the subjectTree and get the recent infomation of the paper list
-        
-        
+                        # 爬取数据
+                        yield scrapy.Request(link=subitemLink, callback=self.parse_pages)
 
-    def parse_pages(self, reponse):
+    def parse_pages(self, response):
+        # 看一下一共有多少页 selector=#dlpage > small:nth-child(4) /html/body/div[5]/div/small[1]  
+        entnumText = response.css(r'#dlpage > small:nth-child(4)::text').get()
+        entNum = int(entnumText.split(" ")[3], base=10)
+
+        # 直接一页展示
+        onepageUrl = r"pastweek?skip={0}&show={1}".format(0, entNum)
+        onepageUrl = "{0}{1}".format(response.url.replace("recent", ""), onepageUrl)
+
+        yield scrapy.Request(link=onepageUrl, callback=self.parse_entries)
+
+
+    def parse_entries(self, response):
+        # 获取上周所有论文的人abs链接地址 selector=#dlpage > dl > dt
+        entriesList = response.css(r'#dlpage > dl > dt')
+
+        # 获取论文链接地址 并爬取摘要信息 #dlpage > dl:nth-child(9) > dt:nth-child(1) > span > a:nth-child(1)
+        for tmpentry in entriesList:
+            entUrl = tmpentry.css(r"span > a:nth-child(1)::attr(href)").get()
+
+            # 根据链接，爬取论文摘要信息
+            yield scrapy.response(link=response.urljoin(entUrl), callback=parse_abs)
+
+    def parse_abs(self, response):
+
+        # 爬取论文的数据信息
+        absUrl = response.url
+        pdfUrl = response.css(r"#abs-outer > div.extra-services > div.full-text > ul > li:nth-child(1) > a ::attr(href)").get()
+        title = response.css(r"#abs > h1 ::text").get()
+
         pass
         
