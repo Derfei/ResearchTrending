@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import scrapy
+from ArvixSpider.items import ArvixspiderItem
 
 
 class TodaypapersSpider(scrapy.Spider):
     name = 'TodayPapers'
-    allowed_domains = ['https://arxiv.org//']
+    allowed_domains = ['arxiv.org']
     start_urls = ['https://arxiv.org//']
 
     def parse(self, response):
@@ -52,18 +53,20 @@ class TodaypapersSpider(scrapy.Spider):
                         subjectLinks[subitemName] = response.urljoin(subitemLink)
 
                         # 爬取数据
-                        yield scrapy.http.Request(response.urljoin(subitemLink), callback=self.parse_pages)
+                        yield scrapy.Request(response.urljoin(subitemLink), self.parse_pages)
 
     def parse_pages(self, response):
         # 看一下一共有多少页 selector=#dlpage > small:nth-child(4) /html/body/div[5]/div/small[1]  
         entnumText = response.css(r'#dlpage > small:nth-child(4)::text').get()
+        if entnumText == None:
+            return
         entNum = int(entnumText.split(" ")[3], base=10)
 
         # 直接一页展示
         onepageUrl = r"pastweek?skip={0}&show={1}".format(0, entNum)
         onepageUrl = "{0}{1}".format(response.url.replace("recent", ""), onepageUrl)
 
-        yield scrapy.http.Request(onepageUrl, callback=self.parse_entries)
+        yield scrapy.Request(onepageUrl, self.parse_entries)
 
 
     def parse_entries(self, response):
@@ -75,7 +78,7 @@ class TodaypapersSpider(scrapy.Spider):
             entUrl = tmpentry.css(r"span > a:nth-child(1)::attr(href)").get()
 
             # 根据链接，爬取论文摘要信息
-            yield scrapy.Request(response.urljoin(entUrl), callback=parse_abs)
+            yield scrapy.Request(response.urljoin(entUrl), self.parse_abs)
 
     def parse_abs(self, response):
 
@@ -86,17 +89,32 @@ class TodaypapersSpider(scrapy.Spider):
         authors = response.css(r"#abs > div.authors > a ::text").getall()
         absText = response.css(r"#abs > blockquote ::text").getall()[2].replace('\n', '').strip()
         comments = response.css(r"#abs > div.metatable > table  > tr:nth-child(1) > td.tablecell.comments.mathjax ::text").get()
-        subjects = response.css(r"#abs > div.metatable > table > tbody > tr:nth-child(2) > td.tablecell.subjects ::text").getall()
+        subjects = response.css(r"#abs > div.metatable > table > tr:nth-child(2) > td.tablecell.subjects ::text").getall()
         submitDate = response.css(r"#abs-outer > div.leftcolumn > div.submission-history ::text").getall()[6]
         updateDate = response.css(r"#abs-outer > div.leftcolumn > div.submission-history ::text").getall()[-1]
 
         # 简单清洗数据，去除所有的换行
+        pdfUrl = response.urljoin(pdfUrl)
         title = title.replace('\n', '')
         authors = [tmp.replace('\n', '') for tmp in authors]
-        comments = comments.replace('\n', '')
+        if comments != None:
+            comments = comments.replace('\n', '')
+        else:
+            comments = ''
         subjects = [tmp.replace('\n', '') for tmp in subjects]
 
 
         # 返回数据
-        return {'absUrl': absUrl, 'pdfUrl': pdfUrl, 'title': title, 'authors': authors, 'absText': absText, 
-        'comments': comments, 'subjects': subjects, 'submitDate': submitDate, 'updateDate': updateDate}
+        tmpItem = ArvixspiderItem()
+        tmpItem['title'] = title
+        tmpItem['authors'] = authors
+        tmpItem['abstract'] = absText
+        tmpItem['uploadDate'] = submitDate
+        tmpItem['updateDate'] = updateDate
+        tmpItem['comments'] = comments
+        tmpItem['subjects'] = subjects
+        tmpItem['absLink'] = absUrl
+        tmpItem['pdfLink'] = pdfUrl
+
+        return tmpItem
+
