@@ -9,28 +9,28 @@ from kafka import KafkaProducer
 import json
 class ArvixspiderPipeline(object):
 
-    @classmethod
-    def from_crawler(cls, crawler):
-        return cls(
-            topic=crawler.settings.get('KAFKA_TOPIC'),
-            kafka_server=crawler.settings.get('KAFKA_BOOTSTRAP_SERVER')
-        )
+    # @classmethod
+    # def from_crawler(cls, crawler):
+    #     return cls(
+    #         topic=crawler.settings.get('KAFKA_TOPIC'),
+    #         kafka_server=crawler.settings.get('KAFKA_BOOTSTRAP_SERVER')
+    #     )
 
-    def __init__(self, topic, kafka_server):
-        self.topic = topic
-        self.kafka_server = kafka_server
-        self.producer = None
+    # def __init__(self, topic, kafka_server):
+    #     self.topic = topic
+    #     self.kafka_server = kafka_server
+    #     self.producer = None
 
-    def open_spider(self, spider):
-        self.producer = KafkaProducer(self.kafka_server)
+    # def open_spider(self, spider):
+    #     self.producer = KafkaProducer(self.kafka_server)
         
     
     def process_item(self, item, spider):
-        msg = json.dumps(item)
-        self.producer.send(self.topic, msg)
+        # msg = json.dumps(item)
+        # self.producer.send(self.topic, msg)
         return item
 
-    def close_spider(self, spider):
-        if self.producer != None:
-            self.producer.close()
+    # def close_spider(self, spider):
+    #     if self.producer != None:
+    #         self.producer.close()
         
