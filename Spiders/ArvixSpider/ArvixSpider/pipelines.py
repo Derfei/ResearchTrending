@@ -21,7 +21,7 @@ class ArvixspiderPipeline:
         self.kafka_server = kafka_server
         self.producer = None
 
-    def open_spider(self, spider, _):
+    def open_spider(self, **args):
         self.producer = KafkaProducer(self.kafka_server)
         
     
