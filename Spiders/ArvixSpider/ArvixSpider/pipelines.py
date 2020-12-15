@@ -19,6 +19,7 @@ class ArvixspiderPipeline(object):
     def __init__(self, topic, kafka_server):
         self.topic = topic
         self.kafka_server = kafka_server
+        self.producer = None
 
     def open_spider(self, spider):
         self.producer = KafkaProducer(self.kafka_server)
@@ -29,6 +30,7 @@ class ArvixspiderPipeline(object):
         self.producer.send(self.topic, msg)
         return item
 
-    def close_spider(self, spider):
-        self.producer.close()
+    def close_spider(self):
+        if self.producer != None:
+            self.producer.close()
         
