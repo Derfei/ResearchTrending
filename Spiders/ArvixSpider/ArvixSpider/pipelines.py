@@ -24,7 +24,7 @@ class ArvixspiderPipeline:
         
     
     def process_item(self, item, spider):
-        msg = json.dumps(dict(item))
+        msg = json.dumps(dict(item)).encode(encoding='utf-8')
         self.producer.send(self.topic, msg)
         return item
 
