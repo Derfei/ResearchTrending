@@ -19,10 +19,8 @@ class ArvixspiderPipeline:
     def __init__(self, topic, kafka_server):
         self.topic = topic
         self.kafka_server = kafka_server
-        self.producer = None
-
-    def open_spider(self, start_requests):
-        self.producer = KafkaProducer(self.kafka_server)
+        # self.producer = None
+        self.producer = KafkaProducer(bootstrap_servers=kafka_server)
         
     
     def process_item(self, item, spider):
